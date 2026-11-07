@@ -321,14 +321,149 @@ function sectionList(section, notes) {
   }).join('\n')}</ul>`;
 }
 
+// ---------- Início (F2) ----------
+// O build junta os dados; as datas relativas ("amanhã", "dia 06 passou", a semana) são calculadas no navegador
+// (src/app.js), para o site não precisar ser gerado de novo todo dia. Especificação: Sistema/Painéis/Plano do site.md.
+
+const brl = (v) => `R$ ${Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const pad = (n) => String(n).padStart(2, '0');
+const lastDay = (ym) => { const [y, m] = ym.split('-').map(Number); return new Date(Date.UTC(y, m, 0)).getUTCDate(); };
+const dayOf = (ym, d) => `${ym}-${pad(Math.min(Number(d), lastDay(ym)))}`;
+const addMonths = (ym, k) => { const [y, m] = ym.split('-').map(Number); const t = y * 12 + m - 1 + k; return `${Math.floor(t / 12)}-${pad((t % 12) + 1)}`; };
+const monthDiff = (a, b) => { const [ya, ma] = a.split('-').map(Number); const [yb, mb] = b.split('-').map(Number); return (yb - ya) * 12 + (mb - ma); };
+const AREA_DA_CATEGORIA = { casa: 'casa', igreja: 'igreja' }; // o resto das contas é finanças
+
+function homeData(notes) {
+  const inFolder = (f) => notes.filter((n) => n.folder === f);
+  const meses = new Map(inFolder('Finanças/Meses').filter((n) => n.data.tipo === 'mes').map((n) => [String(n.data['mês']), n]));
+  const contas = inFolder('Finanças/Contas').filter((n) => n.data.tipo === 'conta' && n.data.status === 'ativa');
+  const dividas = inFolder('Finanças/Dívidas').filter((n) => n.data.tipo === 'divida' && ['ativa', 'a contratar'].includes(n.data.status));
+
+  // Meses com nota + o mês do build e os dois seguintes (contas recorrentes ainda sem nota)
+  const now = new Date().toISOString().slice(0, 7);
+  const months = [...new Set([...meses.keys(), now, addMonths(now, 1), addMonths(now, 2)])].sort();
+
+  const eventos = [];
+  const resumo = {};
+  for (const ym of months) {
+    const nota = meses.get(ym);
+    const pagos = [nota?.data.pagamentos ?? []].flat();
+    const pagou = (campo, nome) => pagos.some((p) => nfc(linkTarget(p?.[campo]) ?? '') === nome);
+    let aPagar = 0;
+    for (const c of contas) {
+      if (pagou('conta', c.name)) continue;
+      aPagar++;
+      const area = AREA_DA_CATEGORIA[c.data.categoria] ?? 'finanças';
+      const pref = c.data['pagar-em'] || c.data.vencimento;
+      if (!pref) {
+        eventos.push({ data: `${ym}-${pad(lastDay(ym))}`, area, titulo: c.name, obs: `${brl(c.data.valor)} · até o fim do mês`, conta: true });
+      } else {
+        eventos.push({ data: dayOf(ym, pref), limite: dayOf(ym, c.data.vencimento || pref), area, titulo: c.name, obs: brl(c.data.valor), conta: true });
+      }
+    }
+    for (const d of dividas) {
+      const inicio = String(d.data.inicio ?? '');
+      const dia = /^\d{4}-\d{2}-\d{2}$/.test(inicio) ? inicio.slice(8) : 10;
+      const pagouDivida = pagou('divida', d.name) || [d.data.pagamentos ?? []].flat().some((p) => String(p?.data ?? '').startsWith(ym));
+      if (pagouDivida) continue;
+      if (d.data.status === 'a contratar' && inicio.slice(0, 7) === ym) {
+        aPagar++;
+        eventos.push({ data: dayOf(ym, 10), area: 'finanças', titulo: d.name, obs: `contratar · entrada ${brl(d.data.entrada ?? 0)}`, conta: true });
+      } else if (d.data.status === 'ativa' && d.data['primeira-parcela']) {
+        const k = monthDiff(String(d.data['primeira-parcela']), ym) + 1;
+        if (k < 1 || k > Number(d.data.parcelas)) continue;
+        aPagar++;
+        eventos.push({ data: dayOf(ym, dia), area: 'finanças', titulo: d.name, obs: `parcela ${k} de ${d.data.parcelas} · ${brl(d.data['valor-parcela'])}`, conta: true });
+      }
+    }
+    eventos.push({ data: dayOf(ym, 15), area: 'finanças', titulo: 'Extrato', obs: 'conferir no meio do mês', curto: 'conferir o extrato' });
+    eventos.push({ data: dayOf(ym, 30), area: 'finanças', titulo: 'Fechar o mês', obs: 'conferir o extrato', curto: 'fechar o mês' });
+    for (const c of [nota?.data.compromissos ?? []].flat()) {
+      if (c?.data) eventos.push({ data: String(c.data), area: c['área'] ?? 'pessoal', titulo: c['título'] ?? '', obs: c.obs ?? '' });
+    }
+    if (nota) {
+      const teto = Number(nota.data['teto-dia-a-dia'] ?? 0);
+      const usado = Object.values(nota.data.gastos ?? {}).reduce((s, v) => s + (Number(v) || 0), 0);
+      resumo[ym] = { teto, usado, aPagar };
+    }
+  }
+  eventos.sort((a, b) => a.data.localeCompare(b.data));
+
+  const ultimoSaldo = (d) => Number([d.data.saldos ?? []].flat().at(-1)?.valor ?? d.data.valor ?? 0);
+  const dividaTotal = dividas.reduce((s, d) => s + ultimoSaldo(d), 0);
+
+  // Igreja: GP às quartas (horário e locais da nota Próximo GP), Palavra às terças
+  const gp = notes.find((n) => n.name === 'Próximo GP')?.data ?? {};
+  const encontros = [gp.encontros ?? []].flat().filter((e) => e?.data).map((e) => ({ data: String(e.data), local: e.local ?? '', horario: e['horário'] ? String(e['horário']) : '' }));
+  const palavras = inFolder('Igreja/Palavras').filter((n) => isDate(String(n.data.data ?? '')))
+    .map((n) => ({ data: String(n.data.data), titulo: n.name.replace(/^\d{4}-\d{2}-\d{2}\s*/, ''), texto: n.data['texto-base'] ?? '', url: n.url }))
+    .sort((a, b) => b.data.localeCompare(a.data));
+
+  // Projetos: contagem por status (sem os que fazem parte de outro)
+  const projetos = notes.filter((n) => n.section === 'Projetos' && n.data.tipo === 'projeto' && !n.data['parte-de']);
+  const porStatus = {};
+  for (const p of projetos) porStatus[p.data.status ?? 'sem status'] = (porStatus[p.data.status ?? 'sem status'] ?? 0) + 1;
+  const andamento = projetos.filter((p) => ['ativo', 'em uso'].includes(p.data.status)).map((p) => p.name);
+
+  // Pessoal: viagens e tokens
+  const viagens = notes.filter((n) => n.data.tipo === 'viagem' && isDate(String(n.data.ida ?? '')))
+    .map((n) => ({ ida: String(n.data.ida), destino: n.data.destino ?? n.title, url: n.url }));
+  const tokensNota = notes.find((n) => n.name === 'Uso de tokens')?.data ?? {};
+  const tokens = {
+    limite: Number(tokensNota['limite-pessoal'] ?? 30),
+    meses: [tokensNota['medições'] ?? []].flat().filter((m) => m?.origem === 'script' && m['mês'] && !m.parcial)
+      .map((m) => ({ mes: String(m['mês']), pct: Number(m['pct-pessoal']) })),
+  };
+
+  const rotinaNota = notes.find((n) => n.name === 'Rotina diária');
+  const rotina = [...(rotinaNota?.body ?? '').matchAll(/^[-*] (?!\[)(.+)$/gm)].map((m) => toPlainInline(m[1]));
+
+  return {
+    nome: 'Mateus', rotina, rotinaUrl: rotinaNota?.url ?? '/pessoal/',
+    eventos, resumo, dividaTotal, gp: { horario: gp['horário'] ? String(gp['horário']) : '', encontros }, palavras: palavras.slice(0, 5),
+    projetos: { porStatus, andamento }, viagens, tokens,
+  };
+}
+
+const toPlainInline = (s) => s.replace(WIKILINK, (_, _b, t, l) => l || t).replace(/[*_`]/g, '').trim();
+
+const ICONE = {
+  'finanças': '<path d="M3 7h15a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M3 7l12-3v3"></path><circle cx="16" cy="13" r="1.2"></circle>',
+  igreja: '<path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M12 8v6M9 11h6"></path>',
+  projetos: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>',
+  pessoal: '<path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"></path><circle cx="12" cy="10" r="2.5"></circle>',
+};
+const icone = (area) => `<span class="ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONE[area]}</svg></span>`;
+
 function homePage(notes) {
-  const cards = SECTIONS.map((s) => {
-    const count = notes.filter((n) => n.section === s && !n.isIndex).length;
-    return `<a class="card section-card" href="/${slugify(s)}/"><strong>${s}</strong><span class="meta">${count} ${count === 1 ? 'nota' : 'notas'}</span></a>`;
-  }).join('\n');
+  const dados = JSON.stringify(homeData(notes)).replace(/</g, '\\u003c');
+  const card = (area, titulo, href, extra = '') => `<a class="tile tile-${area}" href="${href}">
+    <div class="tile-top"><span class="tile-name">${icone(area)}${titulo}</span>${extra}</div>
+    <div data-tile="${area}"></div>
+  </a>`;
   return `
-<header class="note-header"><p class="meta" data-hoje></p><h1>Início</h1></header>
-<div class="section-grid">${cards}</div>`;
+<div class="inicio">
+  <header class="inicio-head">
+    <h1 data-saudacao>Olá</h1>
+    <p data-hoje-linha></p>
+  </header>
+  <section class="rotina" aria-labelledby="rotina-titulo">
+    <div class="rotina-head"><p class="lbl" id="rotina-titulo">Todo dia</p><p class="rotina-conta" data-rotina-conta></p></div>
+    <div class="rotina-itens" data-rotina></div>
+  </section>
+  <section class="semana" aria-labelledby="semana-titulo">
+    <div class="semana-head"><p class="lbl" id="semana-titulo" data-semana-titulo>Esta semana</p><p class="depois" data-depois></p></div>
+    <div class="semana-dias" data-semana></div>
+  </section>
+  <section class="tiles" aria-label="Áreas">
+    ${card('finanças', 'Finanças', '/financas/', '<span class="tile-link">ver painel →</span>')}
+    ${card('igreja', 'Igreja', '/igreja/')}
+    ${card('projetos', 'Projetos', '/projetos/')}
+    ${card('pessoal', 'Pessoal', '/pessoal/')}
+  </section>
+  <noscript><p>Ative o JavaScript para ver o Início.</p></noscript>
+</div>
+<script type="application/json" id="dados-inicio">${dados}</script>`;
 }
 
 const notFound = () => `<header class="note-header"><h1>Página não encontrada</h1></header><p><a href="/">← Início</a></p>`;
