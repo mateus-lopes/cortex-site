@@ -42,6 +42,10 @@ const number = (n) => n.toLocaleString('pt-BR', Number.isInteger(n) ? {} : { min
 
 // ---------- leitura do vault ----------
 
+// Emojis no começo dos títulos ficam só no vault; no site, poluem a tela
+const LEADING_EMOJI = /^(?:[\p{Extended_Pictographic}\p{Emoji_Modifier}\u{FE0F}\u{200D}\u{20E3}]|[0-9#*]\u{FE0F}?\u{20E3})+\s*/u;
+const stripEmoji = (s) => s.replace(LEADING_EMOJI, '');
+
 function splitFrontmatter(src) {
   const m = src.match(/^---\n([\s\S]*?)\n---\n?/);
   if (!m) return { data: {}, body: src };
@@ -52,7 +56,7 @@ async function readNote(file, rel) {
   const raw = (await readFile(file, 'utf8')).replace(/^﻿/, '').replace(/\r\n/g, '\n');
   const { data, body } = splitFrontmatter(raw);
   const name = nfc(path.basename(file, '.md'));
-  const title = body.match(/^# (.+)$/m)?.[1]?.trim() ?? name;
+  const title = stripEmoji(body.match(/^# (.+)$/m)?.[1]?.trim() ?? name);
   return { name, data, body, title, folder: nfc(path.dirname(rel).split(path.sep).join('/')) };
 }
 
@@ -223,6 +227,7 @@ function renderMarkdown(note, notes) {
   let md = note.body
     .replace(/%%[\s\S]*?%%/g, '')
     .replace(/^\s*# .*\n/, '')
+    .replace(/^(#{1,6} )(.*)$/gm, (_, h, t) => h + stripEmoji(t))
     .replace(/==([^=\n]+)==/g, '<mark>$1</mark>');
   md = resolveWikilinks(md);
   const blocks = [];
@@ -277,10 +282,9 @@ function layout({ title, content, assets, current }) {
 <body>
 <header class="site-header">
   <div class="wrap">
-    <a class="brand" href="/"><img src="/icon.svg" alt="" width="28" height="28"><strong>cortex</strong></a>
+    <nav class="menu" aria-label="Seções">${nav}</nav>
     <button class="theme-toggle" type="button" data-theme-toggle aria-label="Trocar tema"></button>
   </div>
-  <nav class="menu wrap" aria-label="Seções">${nav}</nav>
 </header>
 <main class="wrap">
 ${content}
