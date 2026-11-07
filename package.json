@@ -1,0 +1,18 @@
+{
+  "name": "cortex-site",
+  "private": true,
+  "type": "module",
+  "description": "Site só-leitura do vault cortex (atrás do Cloudflare Access)",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "npm run build && wrangler dev",
+    "deploy": "npm run build && wrangler deploy"
+  },
+  "dependencies": {
+    "marked": "^18.1.1",
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "wrangler": "^4.151.3"
+  }
+}
