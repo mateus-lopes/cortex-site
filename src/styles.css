@@ -291,3 +291,87 @@ a.card:hover { border-color: var(--accent); }
   .inicio-head h1 { font-size: 26px; }
   .inicio .v.big { font-size: 21px; white-space: nowrap; }
 }
+
+/* ---------- Finanças (F2) ---------- */
+.financas { display: flex; flex-direction: column; gap: 14px; padding-top: 20px; }
+.financas .lbl { margin: 0; font-size: 13px; font-weight: 500; color: var(--muted); }
+.financas .v { margin: 6px 0 0; font-weight: 600; letter-spacing: -.02em; font-size: 18px; line-height: 1.3; }
+.financas .v.big { font-size: 28px; margin-top: 2px; }
+.financas .v.huge { font-size: 36px; }
+.financas .s { margin: 6px 0 0; font-size: 14px; line-height: 1.45; color: var(--muted); }
+.financas .sub { font-size: 14px; font-weight: 400; letter-spacing: 0; color: var(--muted); }
+.financas .alerta { color: var(--alerta); }
+.num { font-family: ui-monospace, "Geist Mono", monospace; font-weight: 500; font-variant-numeric: tabular-nums; }
+.card-w { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 18px 20px; }
+
+.teto { display: flex; align-items: center; gap: 28px; padding: 18px 22px; border-radius: 18px; background: var(--rotina-bg); color: var(--rotina-tx); }
+.teto .lbl, .teto .sub { color: var(--rotina-muted); }
+.teto-valor { flex-shrink: 0; width: 280px; }
+.teto .sub { margin: 6px 0 0; font-size: 13px; }
+.teto .v .sub { font-size: 14px; }
+.barra-teto { height: 7px; border-radius: 999px; background: var(--rotina-borda); overflow: hidden; margin-top: 10px; }
+.barra-teto > div { height: 100%; background: var(--rotina-tx); border-radius: 999px; }
+.pills { flex-grow: 1; display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
+.pill { display: inline-flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--rotina-borda); background: var(--rotina-btn); font-size: 14px; }
+
+.fin-cards { display: grid; grid-template-columns: 1.2fr repeat(var(--n, 2), minmax(0, 1fr)); gap: 12px; }
+.divida {
+  display: flex; flex-direction: column; border-radius: 18px; padding: 18px 20px; text-decoration: none; color: var(--text);
+  background: color-mix(in srgb, var(--c) 14%, var(--surface)); border: 1px solid color-mix(in srgb, var(--c) 30%, transparent);
+}
+.divida:hover { border-color: var(--c); }
+.divida .lbl { color: var(--text); font-weight: 600; }
+.barra-div { height: 7px; border-radius: 999px; overflow: hidden; margin-top: 10px; background: color-mix(in srgb, var(--c) 25%, transparent); }
+.barra-div > div { height: 100%; background: var(--c); min-width: 2px; }
+
+.graf-head { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px 20px; }
+.legenda { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--muted); padding-top: 4px; }
+.leg { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 10px; height: 10px; border-radius: 3px; }
+.sw.proj { background: var(--muted); opacity: .35; }
+.graf-scroll { overflow-x: auto; margin-top: 12px; }
+.graf { min-width: 640px; }
+.graf-area { position: relative; height: 220px; display: flex; padding: 22px 34px 0 0; border-bottom: 1px solid var(--border); }
+.grade { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--border); }
+.grade span { position: absolute; right: 0; top: -8px; font-size: 11px; color: var(--muted); font-family: ui-monospace, monospace; }
+.col { position: relative; flex: 1 1 0; z-index: 1; }
+.pilha { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: min(26px, 70%); border-radius: 6px 6px 0 0; overflow: hidden; display: flex; flex-direction: column; }
+.pilha.zero { height: 3px !important; background: var(--border); }
+.seg { min-height: 0; }
+.seg + .seg { border-top: 2px solid var(--surface); }
+.col.proj .seg { opacity: .35; }
+.col.atual .pilha { outline: 2px solid var(--text); outline-offset: 2px; }
+.rot { position: absolute; left: 50%; transform: translateX(-50%); font-size: 10px; color: var(--muted); white-space: nowrap; font-family: ui-monospace, monospace; }
+.col.atual .rot { color: var(--text); font-weight: 700; font-size: 11px; background: var(--bg); padding: 2px 6px; border-radius: 999px; }
+.graf-meses { display: flex; padding-right: 34px; margin-top: 6px; }
+.graf-meses span { flex: 1 1 0; text-align: center; font-size: 11px; color: var(--muted); }
+.graf-meses span small { display: block; font-size: 10px; }
+.graf-meses span.atual { color: var(--accent); font-weight: 700; }
+.premissa { margin: 10px 0 0; font-size: 12px; color: var(--muted); }
+
+.contas-mes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.bloco-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+.bloco-head .num { margin: 0; font-size: 15px; }
+.item { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; background: var(--bg); font-size: 14px; line-height: 1.35; }
+.item + .item { margin-top: 8px; }
+.item b { display: block; font-size: 15px; font-weight: 600; }
+.item span:not(.num) { color: var(--muted); }
+.item.alerta-bg { background: color-mix(in srgb, var(--alerta) 12%, var(--surface)); }
+.item.alerta-bg span:not(.num) { color: var(--alerta); font-weight: 600; }
+.pagas { border-radius: 18px; padding: 18px 20px; background: var(--cas-bg); color: var(--cas-tx); }
+.pagas .lbl { color: var(--cas-tx); }
+.pagas-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px; }
+.pagas .row { display: flex; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid color-mix(in srgb, var(--cas-tx) 18%, transparent); font-size: 14px; }
+.pagas .row small { opacity: .75; }
+.fin-notas { margin-top: 40px; }
+
+@media (max-width: 900px) {
+  .teto { flex-direction: column; align-items: stretch; gap: 14px; }
+  .teto-valor { width: auto; }
+  .pills { justify-content: flex-start; }
+  .fin-cards, .contas-mes { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .pagas-grid { grid-template-columns: 1fr; }
+  .financas .v.huge { font-size: 30px; }
+}

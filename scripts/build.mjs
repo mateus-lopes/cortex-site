@@ -360,9 +360,9 @@ function homeData(notes) {
       const area = AREA_DA_CATEGORIA[c.data.categoria] ?? 'finanças';
       const pref = c.data['pagar-em'] || c.data.vencimento;
       if (!pref) {
-        eventos.push({ data: `${ym}-${pad(lastDay(ym))}`, area, titulo: c.name, obs: `${brl(c.data.valor)} · até o fim do mês`, conta: true });
+        eventos.push({ data: `${ym}-${pad(lastDay(ym))}`, area, titulo: c.name, obs: `${brl(c.data.valor)} · até o fim do mês`, conta: true, valor: Number(c.data.valor), semData: true });
       } else {
-        eventos.push({ data: dayOf(ym, pref), limite: dayOf(ym, c.data.vencimento || pref), area, titulo: c.name, obs: brl(c.data.valor), conta: true });
+        eventos.push({ data: dayOf(ym, pref), limite: dayOf(ym, c.data.vencimento || pref), area, titulo: c.name, obs: brl(c.data.valor), conta: true, valor: Number(c.data.valor) });
       }
     }
     for (const d of dividas) {
@@ -372,12 +372,12 @@ function homeData(notes) {
       if (pagouDivida) continue;
       if (d.data.status === 'a contratar' && inicio.slice(0, 7) === ym) {
         aPagar++;
-        eventos.push({ data: dayOf(ym, 10), area: 'finanças', titulo: d.name, obs: `contratar · entrada ${brl(d.data.entrada ?? 0)}`, conta: true });
+        eventos.push({ data: dayOf(ym, 10), area: 'finanças', titulo: d.name, obs: `contratar · entrada ${brl(d.data.entrada ?? 0)}`, conta: true, valor: Number(d.data.entrada ?? 0), detalhe: 'entrada do parcelamento' });
       } else if (d.data.status === 'ativa' && d.data['primeira-parcela']) {
         const k = monthDiff(String(d.data['primeira-parcela']), ym) + 1;
         if (k < 1 || k > Number(d.data.parcelas)) continue;
         aPagar++;
-        eventos.push({ data: dayOf(ym, dia), area: 'finanças', titulo: d.name, obs: `parcela ${k} de ${d.data.parcelas} · ${brl(d.data['valor-parcela'])}`, conta: true });
+        eventos.push({ data: dayOf(ym, dia), area: 'finanças', titulo: d.name, obs: `parcela ${k} de ${d.data.parcelas} · ${brl(d.data['valor-parcela'])}`, conta: true, valor: Number(d.data['valor-parcela']), detalhe: `parcela ${k} de ${d.data.parcelas}` });
       }
     }
     eventos.push({ data: dayOf(ym, 15), area: 'finanças', titulo: 'Extrato', obs: 'conferir no meio do mês', curto: 'conferir o extrato' });
@@ -388,7 +388,9 @@ function homeData(notes) {
     if (nota) {
       const teto = Number(nota.data['teto-dia-a-dia'] ?? 0);
       const usado = Object.values(nota.data.gastos ?? {}).reduce((s, v) => s + (Number(v) || 0), 0);
-      resumo[ym] = { teto, usado, aPagar };
+      const pagas = pagos.map((x) => ({ nome: linkTarget(x?.conta ?? x?.divida) ?? '', valor: Number(x?.valor ?? 0), obs: x?.obs ?? '' }))
+        .sort((a, b) => b.valor - a.valor);
+      resumo[ym] = { teto, usado, aPagar, gastos: nota.data.gastos ?? {}, pagas, nota: nota.url };
     }
   }
   eventos.sort((a, b) => a.data.localeCompare(b.data));
@@ -427,6 +429,120 @@ function homeData(notes) {
     eventos, resumo, dividaTotal, gp: { horario: gp['horário'] ? String(gp['horário']) : '', encontros }, palavras: palavras.slice(0, 5),
     projetos: { porStatus, andamento }, viagens, tokens,
   };
+}
+
+// ---------- Finanças (F2) ----------
+// Especificação: Sistema/Painéis/Painel de Finanças.md. Projeção = cenário E (seção 4).
+
+const RENDA_BASE = 5100;        // seção 4, item 1
+const DENTISTA_ATRASADO = 512;  // seção 4, item 6: pago no mês seguinte à quitação da dívida de maior taxa
+const CORES_DIVIDA = ['#ff9f0a', '#0a84ff', '#bf5af2', '#30b0c7']; // pela ordem de taxa: Bradesco laranja, BB azul
+
+function financeData(notes) {
+  const inFolder = (f) => notes.filter((n) => n.folder === f);
+  const contas = inFolder('Finanças/Contas').filter((n) => n.data.tipo === 'conta' && n.data.status === 'ativa');
+  const todas = inFolder('Finanças/Dívidas').filter((n) => n.data.tipo === 'divida');
+  const painel = todas.filter((d) => ['ativa', 'a contratar'].includes(d.data.status))
+    .sort((a, b) => Number(b.data['taxa-mensal'] ?? 0) - Number(a.data['taxa-mensal'] ?? 0));
+  const ultimoMes = inFolder('Finanças/Meses').filter((n) => n.data.tipo === 'mes').sort((a, b) => String(b.data['mês']).localeCompare(String(a.data['mês'])))[0];
+  const teto = Number(ultimoMes?.data['teto-dia-a-dia'] ?? 0);
+
+  const saldos = (d) => [d.data.saldos ?? []].flat().filter((x) => x?.['mês']).map((x) => ({ mes: String(x['mês']), valor: Number(x.valor) }));
+  const ultimoSaldo = (d) => saldos(d).at(-1)?.valor ?? Number(d.data.valor ?? 0);
+  const curto = (d) => d.name.split(' ')[0];
+  const mesCurto = (ym) => `${MONTHS[Number(ym.slice(5)) - 1]}/${ym.slice(0, 4)}`;
+
+  // Histórico real: do primeiro ao último mês com saldo (todas as dívidas, inclusive quitadas)
+  const ordem = [...painel, ...todas.filter((d) => !painel.includes(d))];
+  const mesesReais = [...new Set(todas.flatMap((d) => saldos(d).map((x) => x.mes)))].sort();
+  const grafico = mesesReais.map((mes) => ({ mes, tipo: 'real', valores: ordem.map((d) => saldos(d).find((x) => x.mes === mes)?.valor ?? 0) }));
+
+  // Projeção: juros pela taxa de cada uma, a parcela de cada uma, e o extra inteiro na de maior taxa
+  const contasTotal = contas.reduce((s, c) => s + Number(c.data.valor ?? 0), 0);
+  const parcelas = painel.reduce((s, d) => s + Number(d.data['valor-parcela'] ?? 0), 0);
+  const sobra = RENDA_BASE - contasTotal - parcelas;
+  const extra = sobra - teto;
+  const estado = ordem.map((d) => ({
+    d, saldo: painel.includes(d) ? ultimoSaldo(d) : 0, taxa: Number(d.data['taxa-mensal'] ?? 0) / 100, parcela: Number(d.data['valor-parcela'] ?? 0),
+    inicioParcelas: String(d.data['primeira-parcela'] ?? addMonths(String(d.data.inicio ?? '').slice(0, 7) || mesesReais.at(-1), 1)),
+    quitacao: null,
+  }));
+  let dentista = DENTISTA_ATRASADO;
+  let mes = mesesReais.at(-1) ?? new Date().toISOString().slice(0, 7);
+  for (let i = 0; i < 120 && estado.some((x) => x.saldo > 0.005); i++) {
+    mes = addMonths(mes, 1);
+    let livre = Math.max(0, extra);
+    const prioridade = estado.find((x) => painel.includes(x.d));
+    if (dentista && prioridade?.quitacao && monthDiff(prioridade.quitacao, mes) === 1) { livre = Math.max(0, livre - dentista); dentista = 0; }
+    for (const x of estado) {
+      if (x.saldo <= 0) continue;
+      x.saldo *= 1 + x.taxa;
+      if (mes >= x.inicioParcelas) x.saldo -= x.parcela;
+      if (x.saldo < 0) { livre += -x.saldo; x.saldo = 0; }
+    }
+    for (const x of estado) {
+      if (x.saldo <= 0 || livre <= 0) continue;
+      const a = Math.min(livre, x.saldo);
+      x.saldo -= a;
+      livre -= a;
+    }
+    for (const x of estado) if (x.saldo <= 0.005 && !x.quitacao && painel.includes(x.d)) { x.saldo = 0; x.quitacao = mes; }
+    grafico.push({ mes, tipo: 'projeção', valores: estado.map((x) => Math.max(0, x.saldo)) });
+  }
+
+  const dividas = painel.map((d, i) => {
+    const e = estado.find((x) => x.d === d);
+    const valor = Number(d.data.valor ?? 0);
+    const etiquetas = [];
+    if (i === 0) etiquetas.push('prioridade 1');
+    if (d.data.status === 'a contratar') {
+      const ini = String(d.data.inicio ?? '').slice(0, 7);
+      if (ini) etiquetas.push(`contratar até 10/${ini.slice(5)}`);
+    } else if (Number(d.data['parcelas-pagas'] ?? 0) === 0 && d.data['primeira-parcela']) {
+      const entrada = [d.data.pagamentos ?? []].flat().some((p) => p?.tipo === 'entrada');
+      etiquetas.push(`${entrada ? 'entrada paga · ' : ''}1ª parcela em ${MONTHS[Number(String(d.data['primeira-parcela']).slice(5, 7)) - 1]}`);
+    }
+    return {
+      nome: `${curto(d)} · ${d.name.split(' ').slice(1).join(' ')} ${d.data.parcelas}x`.replace(/\s+/g, ' '),
+      curto: curto(d), url: d.url, cor: CORES_DIVIDA[i % CORES_DIVIDA.length], taxa: Number(d.data['taxa-mensal'] ?? 0),
+      etiqueta: etiquetas.join(' · '), saldo: ultimoSaldo(d),
+      progresso: valor ? Math.max(0, Math.min(1, (valor - ultimoSaldo(d)) / valor)) : 0,
+      parcelasPagas: Number(d.data['parcelas-pagas'] ?? 0), parcelas: Number(d.data.parcelas ?? 0), valorParcela: Number(d.data['valor-parcela'] ?? 0),
+      estrategia: i === 0 ? 'antecipar com a sobra' : `antecipar depois do ${curto(painel[i - 1])}`,
+      quitacao: e?.quitacao ? mesCurto(e.quitacao) : '—',
+    };
+  });
+  const series = ordem.map((d, i) => ({ nome: curto(d), taxa: Number(d.data['taxa-mensal'] ?? 0), cor: CORES_DIVIDA[i % CORES_DIVIDA.length] }));
+  return { dividas, series, grafico, premissas: { renda: RENDA_BASE, contas: contasTotal, parcelas, teto, extra } };
+}
+
+function financePage(notes, home, indexNote) {
+  const fin = financeData(notes);
+  const dados = JSON.stringify({ fin, resumo: home.resumo, eventos: home.eventos.filter((e) => e.conta) }).replace(/</g, '\\u003c');
+  return `
+<div class="financas">
+  <header class="inicio-head">
+    <h1 data-fin-titulo>Finanças</h1>
+    <p data-fin-hoje></p>
+  </header>
+  <section class="teto" data-fin-teto></section>
+  <section class="fin-cards" data-fin-cards></section>
+  <section class="grafico card-w" aria-labelledby="graf-titulo">
+    <div class="graf-head">
+      <div><p class="lbl" id="graf-titulo">Dívida mês a mês</p><p class="v big" data-graf-total></p></div>
+      <div class="legenda" data-graf-legenda></div>
+    </div>
+    <div class="graf-scroll"><div class="graf" data-graf></div></div>
+    <p class="premissa" data-graf-premissa></p>
+  </section>
+  <section class="contas-mes">
+    <div class="card-w" data-fin-apagar></div>
+    <div class="pagas" data-fin-pagas></div>
+  </section>
+  <noscript><p>Ative o JavaScript para ver o painel.</p></noscript>
+</div>
+<script type="application/json" id="dados-financas">${dados}</script>
+${indexNote ? `<section class="fin-notas"><h2>Notas de finanças</h2><div class="prose">${indexNote.html}</div></section>` : ''}`;
 }
 
 const toPlainInline = (s) => s.replace(WIKILINK, (_, _b, t, l) => l || t).replace(/[*_`]/g, '').trim();
@@ -518,7 +634,9 @@ async function build() {
   for (const n of notes) {
     if (pages.has(n.url)) console.warn(`  URL repetida: ${n.url} (${n.name})`);
     const current = SECTIONS.includes(n.section) ? n.section : '';
-    pages.set(n.url, layout({ title: n.title, current, assets, content: notePage(n, indexes.get(n.section)) }));
+    // A página de Finanças é o painel (F2), com as tabelas da nota principal embaixo
+    const content = n.isIndex && n.section === 'Finanças' ? financePage(notes, homeData(notes), n) : notePage(n, indexes.get(n.section));
+    pages.set(n.url, layout({ title: n.title, current, assets, content }));
   }
   pages.set('/404.html', layout({ title: 'Página não encontrada', assets, content: notFound() }));
   for (const [url, html] of pages) await writePage(url, html);

@@ -146,6 +146,102 @@ function renderInicio(D) {
     + (tk ? `<p class="s rodape mini">tokens pessoais em ${MESES[Number(tk.mes.slice(5)) - 1]}: ${tk.pct.toLocaleString('pt-BR')}% (limite ${D.tokens.limite}%)${tk.pct > D.tokens.limite ? ' · acima do limite' : ''}</p>` : '');
 }
 
+// ---------- Finanças ----------
+// Especificação: Sistema/Painéis/Painel de Finanças.md. O build manda a projeção pronta; aqui entra só o "hoje".
+
+const GASTO_ROTULO = { comida: 'Comida', transporte: 'Transporte (Uber, 99)', extras: 'Extras', 'gás': 'Gás', 'saúde': 'Saúde (farmácia)', 'não-identificado': 'Não identificado' };
+const MESES_LONGOS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+const kilo = (v) => (v <= 0.5 ? '0' : `${(v / 1000).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}k`);
+
+function renderFinancas(D) {
+  const agora = new Date();
+  const hoje = isoOf(agora);
+  const mes = hoje.slice(0, 7);
+  const r = D.resumo[mes];
+  const F = D.fin;
+  const q = (s) => document.querySelector(s);
+
+  // Contas a pagar do mês: o que não está em `pagamentos`; prazo pelo vencimento, alerta se o dia preferido passou
+  const aPagar = D.eventos.filter((e) => e.data.startsWith(mes)).map((e) => {
+    let prazo = e.semData ? 'até o fim do mês' : `até ${ddmm(e.limite ?? e.data)}`;
+    let alerta = false;
+    if (!e.semData && e.data < hoje) { prazo = `dia ${e.data.slice(8)} passou`; alerta = true; }
+    return { ...e, prazo, alerta };
+  }).sort((a, b) => b.alerta - a.alerta || b.valor - a.valor);
+  const totalAPagar = aPagar.reduce((s, e) => s + e.valor, 0);
+
+  q('[data-fin-titulo]').textContent = `Finanças · ${MESES_LONGOS[Number(mes.slice(5)) - 1]} ${mes.slice(0, 4)}`;
+  const diaLongo = new Intl.DateTimeFormat('pt-BR', { weekday: 'long' }).format(agora);
+  q('[data-fin-hoje]').textContent = `hoje: ${diaLongo}, ${ddmm(hoje)} · ${aPagar.length ? `${aPagar.length} ${aPagar.length === 1 ? 'conta' : 'contas'} a pagar` : 'nada a pagar'}`;
+
+  // Teto do dia a dia + gastos por categoria
+  if (r) {
+    const restante = r.teto - r.usado;
+    const pct = r.teto ? Math.min(100, Math.max(0, (r.usado / r.teto) * 100)) : 0;
+    const gastos = Object.entries(r.gastos).filter(([, v]) => Number(v) > 0).sort((a, b) => b[1] - a[1]);
+    q('[data-fin-teto]').innerHTML = `<div class="teto-valor">
+        <p class="lbl">Teto do dia a dia</p>
+        <p class="v big${restante < 0 ? ' alerta' : ''}">${money(restante)} <span class="sub">${restante < 0 ? 'estourou' : 'restantes'}</span></p>
+        <div class="barra-teto" role="img" aria-label="${pct.toFixed(0)}% do teto usado"><div style="width:${pct}%"></div></div>
+        <p class="sub">${money(r.usado)} de ${money(r.teto)} usados</p>
+      </div>
+      <div class="pills">${gastos.map(([k, v]) => `<span class="pill">${esc(GASTO_ROTULO[k] ?? k)}<b class="num">${money(v)}</b></span>`).join('') || '<span class="sub">nenhum gasto anotado ainda</span>'}</div>`;
+  } else {
+    q('[data-fin-teto]').innerHTML = `<p class="sub">Ainda não há nota de ${MESES_LONGOS[Number(mes.slice(5)) - 1].toLowerCase()} no vault.</p>`;
+  }
+
+  // Dívida total + um card por dívida (ordem de taxa)
+  const total = F.dividas.reduce((s, d) => s + d.saldo, 0);
+  q('[data-fin-cards]').style.setProperty('--n', F.dividas.length);
+  q('[data-fin-cards]').innerHTML = `<div class="card-w">
+      <p class="lbl">Dívida total</p>
+      <p class="v huge">${money(total)}</p>
+      <p class="s">o que falta pagar · ${F.dividas.map((d) => `${esc(d.curto)} ${money(d.saldo)}`).join(' + ')}</p>
+    </div>`
+    + F.dividas.map((d) => `<a class="divida" href="${d.url}" style="--c:${d.cor}">
+      <p class="lbl">${esc(d.nome)} · ${d.taxa.toLocaleString('pt-BR')}% a.m.</p>
+      <p class="v">${esc(d.etiqueta.charAt(0).toUpperCase() + d.etiqueta.slice(1))}</p>
+      <div class="barra-div" role="img" aria-label="${Math.round(d.progresso * 100)}% abatido"><div style="width:${Math.max(d.progresso * 100, 0)}%"></div></div>
+      <p class="s">${d.parcelasPagas} de ${d.parcelas} parcelas · ${money(d.valorParcela)}/mês · ${esc(d.estrategia)} · quitação prevista: ${esc(d.quitacao)}</p>
+    </a>`).join('');
+
+  // Gráfico: barras empilhadas, real cheio, projeção clara e tracejada, mês atual em destaque
+  q('[data-graf-total]').innerHTML = `${money(total)} <span class="sub">hoje</span>`;
+  q('[data-graf-legenda]').innerHTML = F.series.filter((s, i) => F.grafico.some((g) => g.valores[i] > 0))
+    .map((s) => `<span class="leg"><span class="sw" style="background:${s.cor}"></span>${esc(s.nome)} · ${s.taxa.toLocaleString('pt-BR')}% a.m.</span>`).join('')
+    + '<span class="leg"><span class="sw proj"></span>projeção (cor apagada)</span>';
+  const max = Math.max(...F.grafico.map((g) => g.valores.reduce((a, b) => a + b, 0)), 1);
+  const passo = max > 10000 ? 5000 : 2000;
+  const linhas = [];
+  for (let v = passo; v < max; v += passo) linhas.push(`<div class="grade" style="bottom:${(v / max) * 100}%"><span>${v / 1000}k</span></div>`);
+  let ano = '';
+  q('[data-graf]').innerHTML = `<div class="graf-area">${linhas.join('')}${F.grafico.map((g) => {
+    const soma = g.valores.reduce((a, b) => a + b, 0);
+    const atual = g.mes === mes;
+    const proj = g.tipo === 'projeção' && g.mes > mes;
+    const h = (soma / max) * 100;
+    const segs = g.valores.map((v, i) => (v > 0 ? `<div class="seg" style="flex:${v};background:${F.series[i].cor}"></div>` : '')).join('');
+    return `<div class="col${atual ? ' atual' : ''}${proj ? ' proj' : ''}" title="${esc(`${g.mes}: ${money(soma)}${proj ? ' (projeção)' : ''}`)}">
+      <span class="rot" style="bottom:calc(${h}% + 6px)">${kilo(soma)}</span><div class="pilha${soma ? '' : ' zero'}" style="height:${soma ? h : 0}%">${segs}</div></div>`;
+  }).join('')}</div>
+  <div class="graf-meses">${F.grafico.map((g) => {
+    const y = g.mes.slice(0, 4);
+    const virada = ano && y !== ano;
+    ano = y;
+    return `<span class="${g.mes === mes ? 'atual' : ''}">${MESES[Number(g.mes.slice(5)) - 1]}${virada ? `<small>${y}</small>` : ''}</span>`;
+  }).join('')}</div>`;
+  const P = F.premissas;
+  q('[data-graf-premissa]').textContent = `Projeção: renda ${money(P.renda)} − contas ${money(P.contas)} − parcelas ${money(P.parcelas)} − teto ${money(P.teto)} = ${money(P.extra)}/mês para antecipar.`;
+
+  // Contas a pagar e pagas
+  q('[data-fin-apagar]').innerHTML = `<div class="bloco-head"><p class="lbl">Contas a pagar</p><p class="num">${money(totalAPagar)}</p></div>`
+    + (aPagar.map((e) => `<div class="item${e.alerta ? ' alerta-bg' : ''}"><div><b>${esc(e.titulo)}</b><span>${esc([e.detalhe, e.prazo].filter(Boolean).join(' · '))}</span></div><span class="num">${money(e.valor)}</span></div>`).join('')
+      || '<p class="s">Tudo pago este mês.</p>');
+  const pagas = r?.pagas ?? [];
+  q('[data-fin-pagas]').innerHTML = `<div class="bloco-head"><p class="lbl">Contas pagas · ${pagas.length}</p><p class="num">${money(pagas.reduce((s, p) => s + p.valor, 0))}</p></div>
+    <div class="pagas-grid">${pagas.map((p) => `<div class="row"><span>${esc(p.nome)}${p.obs ? ` <small>(${esc(p.obs)})</small>` : ''}</span><b class="num">${p.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b></div>`).join('')}</div>`;
+}
+
 // Rotina marcável: a marcação fica só neste navegador e zera todo dia
 function renderRotina(D, hoje) {
   const box = document.querySelector('[data-rotina]');
@@ -181,6 +277,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('[data-theme-toggle]').forEach(setupThemeToggle);
   const dados = document.getElementById('dados-inicio');
   if (dados) renderInicio(JSON.parse(dados.textContent));
+  const fin = document.getElementById('dados-financas');
+  if (fin) renderFinancas(JSON.parse(fin.textContent));
   document.querySelectorAll('[data-hoje]').forEach((el) => {
     el.textContent = new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
   });
