@@ -7,8 +7,8 @@ vault cortex ──git push──▶ GitHub Action (cortex/.github/workflows/sit
 ```
 
 ## Segurança
-- O site fica atrás do **Cloudflare Access** (login por e-mail), ligado no workers.dev do Worker.
-- O `src/worker.js` confere de novo o token do Access (assinatura, `aud`, emissor e validade) antes de servir qualquer arquivo. Sem `ACCESS_TEAM`/`ACCESS_AUD` no `wrangler.jsonc`, responde **403** para tudo.
+- O `src/worker.js` pede uma senha antes de servir qualquer arquivo. Acertando, grava um cookie de sessão assinado (HMAC com a senha) que vale 90 dias. `/sair` encerra a sessão.
+- A senha é o secret `SITE_SENHA` do Worker (`npx wrangler secret put SITE_SENHA`); trocar a senha derruba todas as sessões. Sem ela, o site responde **403** para tudo.
 
 ## O que vira o quê
 - Seções do menu: `Finanças`, `Igreja`, `Projetos`, `Pessoal`. A nota com o nome da pasta é a página da seção; sem ela, o build lista as notas.
@@ -21,6 +21,6 @@ vault cortex ──git push──▶ GitHub Action (cortex/.github/workflows/sit
 ```bash
 npm install
 npm run build   # lê ../../cortex por padrão (CONTENT_DIR muda)
-npm run dev     # precisa de .dev.vars com DEV_SEM_ACCESS=1 para abrir sem Access
+npm run dev     # precisa de .dev.vars com DEV_SEM_SENHA=1 para abrir sem senha
 npm run deploy
 ```

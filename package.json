@@ -2,7 +2,7 @@
   "name": "cortex-site",
   "private": true,
   "type": "module",
-  "description": "Site só-leitura do vault cortex (atrás do Cloudflare Access)",
+  "description": "Site só-leitura do vault cortex (com senha)",
   "scripts": {
     "build": "node scripts/build.mjs",
     "dev": "npm run build && wrangler dev",

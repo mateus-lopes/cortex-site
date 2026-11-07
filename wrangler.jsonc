@@ -8,13 +8,8 @@
     "binding": "ASSETS",
     "not_found_handling": "404-page",
     "html_handling": "auto-trailing-slash",
-    // Toda requisição passa pelo worker, que confere o token do Cloudflare Access antes de servir qualquer arquivo
+    // Toda requisição passa pelo worker, que confere a sessão (senha) antes de servir qualquer arquivo
     "run_worker_first": true
-  },
-  "vars": {
-    // Preenchidos depois de ligar o Access no workers.dev. Vazios = o site responde 403 para todo mundo.
-    "ACCESS_TEAM": "",
-    "ACCESS_AUD": ""
   },
   "workers_dev": true,
   "preview_urls": false
