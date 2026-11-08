@@ -275,6 +275,8 @@ function layout({ title, content, assets, current }) {
 <meta name="theme-color" content="#f7f7f5" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#121314" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="cortex">
 <script>try { const t = localStorage.getItem('tema'); if (t) document.documentElement.dataset.theme = t; } catch {}</script>
 <link rel="stylesheet" href="${assets.css}">
 <script src="${assets.js}" defer></script>
@@ -633,6 +635,7 @@ async function build() {
   await writeFile(path.join(OUT, 'assets', 'styles.css'), css);
   await writeFile(path.join(OUT, 'assets', 'app.js'), js);
   await copyFile(path.join(SRC, 'icon.svg'), path.join(OUT, 'icon.svg'));
+  await copyFile(path.join(SRC, 'apple-touch-icon.png'), path.join(OUT, 'apple-touch-icon.png'));
   for (const name of usedAttachments) {
     const rel = attachments.get(name);
     const dest = path.join(OUT, 'anexos', rel);
