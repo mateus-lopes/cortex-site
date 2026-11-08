@@ -497,7 +497,9 @@ function financeData(notes) {
     if (i === 0) etiquetas.push('prioridade 1');
     if (d.data.status === 'a contratar') {
       const ini = String(d.data.inicio ?? '').slice(0, 7);
-      if (ini) etiquetas.push(`contratar até 10/${ini.slice(5)}`);
+      const entradaPaga = [d.data.pagamentos ?? []].flat().some((p) => p?.tipo === 'entrada');
+      if (entradaPaga) etiquetas.push('entrada paga · aguardando o parcelamento');
+      else if (ini) etiquetas.push(`contratar até 10/${ini.slice(5)}`);
     } else if (Number(d.data['parcelas-pagas'] ?? 0) === 0 && d.data['primeira-parcela']) {
       const entrada = [d.data.pagamentos ?? []].flat().some((p) => p?.tipo === 'entrada');
       etiquetas.push(`${entrada ? 'entrada paga · ' : ''}1ª parcela em ${MONTHS[Number(String(d.data['primeira-parcela']).slice(5, 7)) - 1]}`);
