@@ -513,7 +513,19 @@ function financeData(notes) {
     };
   });
   const series = ordem.map((d, i) => ({ nome: curto(d), taxa: Number(d.data['taxa-mensal'] ?? 0), cor: CORES_DIVIDA[i % CORES_DIVIDA.length] }));
-  return { dividas, series, grafico, premissas: { renda: RENDA_BASE, contas: contasTotal, parcelas, teto, extra } };
+  // Mercado (comida + casa) por mês, do campo `mercado` das notas de mês
+  const mercado = inFolder('Finanças/Meses').filter((n) => n.data.tipo === 'mes' && n.data.mercado)
+    .map((n) => {
+      const m = n.data.mercado;
+      const compras = [m.compras ?? []].flat();
+      return {
+        mes: String(n.data['mês']), previsto: Number(m.previsto ?? 0),
+        total: compras.reduce((s, c) => s + Number(c?.valor ?? 0), 0), compras: compras.length,
+        categorias: Object.fromEntries(Object.entries(m.categorias ?? {}).map(([k, v]) => [k, Number(v) || 0])),
+      };
+    })
+    .sort((a, b) => a.mes.localeCompare(b.mes));
+  return { dividas, series, grafico, mercado, premissas: { renda: RENDA_BASE, contas: contasTotal, parcelas, teto, extra } };
 }
 
 function financePage(notes, home, indexNote) {
@@ -526,6 +538,7 @@ function financePage(notes, home, indexNote) {
     <p data-fin-hoje></p>
   </header>
   <section class="teto" data-fin-teto></section>
+  <section class="mercado" data-fin-mercado></section>
   <section class="fin-cards" data-fin-cards></section>
   <section class="grafico card-w" aria-labelledby="graf-titulo">
     <div class="graf-head">

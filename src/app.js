@@ -190,6 +190,53 @@ function renderFinancas(D) {
     q('[data-fin-teto]').innerHTML = `<p class="sub">Ainda não há nota de ${MESES_LONGOS[Number(mes.slice(5)) - 1].toLowerCase()} no vault.</p>`;
   }
 
+  // Mercado: o mês (comida + casa contra o previsto) e o histórico por mês
+  const GRUPOS = [
+    ['Comida', ['mercearia', 'açougue', 'congelados', 'laticínios', 'hortifrúti', 'padaria', 'bebidas'], 'var(--cas-ac)'],
+    ['Casa (higiene + limpeza)', ['higiene', 'limpeza'], 'var(--igr-ac)'],
+    ['Outros', ['outros'], 'var(--muted)'],
+  ];
+  const ROTULO_CAT = { mercearia: 'Mercearia', 'açougue': 'Açougue', congelados: 'Congelados', 'laticínios': 'Laticínios', 'hortifrúti': 'Hortifrúti', padaria: 'Padaria', bebidas: 'Bebidas', higiene: 'Higiene', limpeza: 'Limpeza', outros: 'Outros' };
+  const somaGrupo = (cat, chaves) => chaves.reduce((s, k) => s + (cat[k] ?? 0), 0);
+  const mm = F.mercado.find((x) => x.mes === mes);
+  const box = q('[data-fin-mercado]');
+  if (!F.mercado.length) box.remove();
+  else {
+    const previsto = mm?.previsto || [...F.mercado].reverse().find((x) => x.previsto)?.previsto || 0;
+    let tabela = '<p class="s">Nenhuma compra de mercado anotada este mês.</p>';
+    if (mm) {
+      const linhas = GRUPOS.map(([nome, chaves]) => {
+        const itens = chaves.filter((k) => mm.categorias[k] > 0).sort((a, b) => mm.categorias[b] - mm.categorias[a]);
+        if (!itens.length) return '';
+        return itens.map((k) => `<tr><td>${ROTULO_CAT[k] ?? esc(k)}</td><td class="num">${money(mm.categorias[k])}</td></tr>`).join('')
+          + `<tr class="sub-total"><td>${nome}</td><td class="num">${money(somaGrupo(mm.categorias, chaves))}</td></tr>`;
+      }).join('');
+      tabela = `<table class="cat-tabela"><tbody>${linhas}</tbody></table>`;
+    }
+    const pct = mm && previsto ? Math.min(100, (mm.total / previsto) * 100) : 0;
+    const passou = mm && previsto && mm.total > previsto;
+    const max = Math.max(...F.mercado.map((x) => x.total), previsto, 1);
+    const ALT = 170; // px da barra mais alta
+    const hist = F.mercado.map((x) => `<div class="mcol${x.mes === mes ? ' atual' : ''}" title="${esc(`${x.mes}: ${money(x.total)}`)}">
+        <span class="rot">${money(x.total).replace('R$ ', '')}</span>
+        <div class="pilha" style="height:${Math.round((x.total / max) * ALT)}px">${GRUPOS.map(([, chaves, cor]) => {
+          const v = somaGrupo(x.categorias, chaves);
+          return v > 0 ? `<div class="seg" style="flex:${v};background:${cor}"></div>` : '';
+        }).join('')}</div>
+        <span class="mnome">${MESES[Number(x.mes.slice(5)) - 1]}</span></div>`).join('');
+    box.innerHTML = `<div class="card-w">
+        <div class="bloco-head"><p class="lbl">Mercado do mês · comida + casa</p><p class="num">${mm ? `${money(mm.total)} de ${money(previsto)}` : `previsto ${money(previsto)}`}</p></div>
+        ${mm ? `<div class="barra-merc${passou ? ' passou' : ''}" role="img" aria-label="${pct.toFixed(0)}% do previsto"><div style="width:${pct}%"></div></div>
+        <p class="s">${passou ? `<span class="alerta">passou ${money(mm.total - previsto)} do previsto</span>` : `faltam ${money(previsto - mm.total)} do previsto`} · ${mm.compras} ${mm.compras === 1 ? 'compra' : 'compras'}</p>` : ''}
+        ${tabela}
+      </div>
+      <div class="card-w">
+        <div class="bloco-head"><p class="lbl">Mercado mês a mês</p>
+          <div class="legenda">${GRUPOS.map(([nome, , cor]) => `<span class="leg"><span class="sw" style="background:${cor}"></span>${nome.split(' ')[0]}</span>`).join('')}<span class="leg"><span class="sw linha"></span>previsto</span></div></div>
+        <div class="mgraf">${previsto ? `<div class="linha-prev" style="bottom:${20 + Math.round((previsto / max) * ALT)}px"><span>${money(previsto).replace(',00', '')}</span></div>` : ''}${hist}</div>
+      </div>`;
+  }
+
   // Dívida total + um card por dívida (ordem de taxa)
   const total = F.dividas.reduce((s, d) => s + d.saldo, 0);
   q('[data-fin-cards]').style.setProperty('--n', F.dividas.length);

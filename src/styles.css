@@ -375,3 +375,27 @@ a.card:hover { border-color: var(--accent); }
   .pagas-grid { grid-template-columns: 1fr; }
   .financas .v.huge { font-size: 30px; }
 }
+
+/* Mercado */
+.mercado { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.barra-merc { height: 7px; border-radius: 999px; overflow: hidden; background: var(--border); }
+.barra-merc > div { height: 100%; background: var(--cas-ac); }
+.barra-merc.passou > div { background: var(--alerta); }
+.cat-tabela { margin-top: 12px; font-size: 14px; }
+.cat-tabela td { padding: 6px 0; border-bottom: 1px solid var(--border); }
+.cat-tabela td.num { text-align: right; }
+.cat-tabela .sub-total td { font-weight: 700; border-bottom: 2px solid var(--border); }
+.cat-tabela tr:last-child td { border-bottom: 0; }
+.sw.linha { height: 0; border-top: 2px dashed var(--muted); border-radius: 0; }
+.mgraf { position: relative; height: 230px; display: flex; align-items: flex-end; gap: 8px; margin-top: 16px; padding-right: 70px; }
+.mcol { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1 1 0; max-width: 90px; }
+.mcol .pilha { position: static; transform: none; width: min(44px, 70%); }
+.mcol .rot { position: static; transform: none; }
+.mcol.atual .pilha { outline: 2px solid var(--text); outline-offset: 2px; }
+.mcol.atual .rot { color: var(--text); font-weight: 700; }
+.mnome { height: 16px; line-height: 16px; font-size: 11px; color: var(--muted); }
+.mcol.atual .mnome { color: var(--accent); font-weight: 700; }
+.linha-prev { position: absolute; left: 0; right: 0; border-top: 2px dashed var(--muted); z-index: 0; }
+.linha-prev span { position: absolute; right: 0; top: -9px; font-size: 11px; color: var(--muted); background: var(--surface); padding-left: 4px; font-family: ui-monospace, monospace; }
+.mercado > .card-w { align-self: start; }
+@media (max-width: 900px) { .mercado { grid-template-columns: 1fr; } }
