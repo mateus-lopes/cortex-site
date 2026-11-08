@@ -3,6 +3,7 @@
 // Trocar a senha (`wrangler secret put SITE_SENHA`) derruba todas as sessões.
 
 const COOKIE = 'sessao';
+const PUBLICOS = new Set(['/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png', '/icon-maskable-512.png', '/apple-touch-icon.png']);
 const DIAS = 90;
 const enc = new TextEncoder();
 
@@ -62,6 +63,9 @@ export default {
     if (!env.SITE_SENHA) return new Response('Site fechado: senha ainda não configurada.', { status: 403 });
 
     const url = new URL(request.url);
+
+    // Manifesto e ícones ficam abertos: o navegador busca sem cookie para instalar o app. Não têm dado pessoal.
+    if (PUBLICOS.has(url.pathname)) return env.ASSETS.fetch(request);
 
     if (url.pathname === '/entrar' && request.method === 'POST') {
       const form = await request.formData();

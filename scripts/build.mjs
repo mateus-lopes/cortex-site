@@ -276,6 +276,7 @@ function layout({ title, content, assets, current }) {
 <meta name="theme-color" content="#121314" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
 <meta name="apple-mobile-web-app-title" content="cortex">
 <script>try { const t = localStorage.getItem('tema'); if (t) document.documentElement.dataset.theme = t; } catch {}</script>
 <link rel="stylesheet" href="${assets.css}">
@@ -635,7 +636,17 @@ async function build() {
   await writeFile(path.join(OUT, 'assets', 'styles.css'), css);
   await writeFile(path.join(OUT, 'assets', 'app.js'), js);
   await copyFile(path.join(SRC, 'icon.svg'), path.join(OUT, 'icon.svg'));
-  await copyFile(path.join(SRC, 'apple-touch-icon.png'), path.join(OUT, 'apple-touch-icon.png'));
+  for (const f of ['apple-touch-icon.png', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png']) await copyFile(path.join(SRC, f), path.join(OUT, f));
+  // Manifesto: permite instalar o site como app (Windows, Android). Fica fora da senha (ver src/worker.js).
+  await writeFile(path.join(OUT, 'manifest.webmanifest'), JSON.stringify({
+    name: 'cortex', short_name: 'cortex', lang: 'pt-BR', start_url: '/', scope: '/', display: 'standalone',
+    background_color: '#121314', theme_color: '#121314',
+    icons: [
+      { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+      { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+    ],
+  }, null, 2));
   for (const name of usedAttachments) {
     const rel = attachments.get(name);
     const dest = path.join(OUT, 'anexos', rel);
