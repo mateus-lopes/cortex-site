@@ -227,7 +227,8 @@ function renderFinancas(D) {
     box.innerHTML = `<div class="card-w">
         <div class="bloco-head"><p class="lbl">Mercado do mês · comida + casa</p><p class="num">${mm ? `${money(mm.total)} de ${money(previsto)}` : `previsto ${money(previsto)}`}</p></div>
         ${mm ? `<div class="barra-merc${passou ? ' passou' : ''}" role="img" aria-label="${pct.toFixed(0)}% do previsto"><div style="width:${pct}%"></div></div>
-        <p class="s">${passou ? `<span class="alerta">passou ${money(mm.total - previsto)} do previsto</span>` : `faltam ${money(previsto - mm.total)} do previsto`} · ${mm.compras} ${mm.compras === 1 ? 'compra' : 'compras'}</p>` : ''}
+        <p class="s">${passou ? `<span class="alerta">passou ${money(mm.total - previsto)} do previsto</span>` : `faltam ${money(previsto - mm.total)} do previsto`} · ${mm.compras} ${mm.compras === 1 ? 'compra' : 'compras'}</p>
+        <p class="s">${Object.entries(mm.porPagamento).map(([k, v]) => `${esc(k)}: ${money(v)}${/cart/.test(k) ? ' (fatura do mês seguinte)' : /pix/i.test(k) ? ' (sai do dia a dia)' : ''}`).join(' · ')}</p>` : ''}
         ${tabela}
       </div>
       <div class="card-w">

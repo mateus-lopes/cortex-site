@@ -521,6 +521,7 @@ function financeData(notes) {
       return {
         mes: String(n.data['mês']), previsto: Number(m.previsto ?? 0),
         total: compras.reduce((s, c) => s + Number(c?.valor ?? 0), 0), compras: compras.length,
+        porPagamento: compras.reduce((acc, c) => { const k = c?.pagamento ?? 'sem forma'; acc[k] = (acc[k] ?? 0) + Number(c?.valor ?? 0); return acc; }, {}),
         categorias: Object.fromEntries(Object.entries(m.categorias ?? {}).map(([k, v]) => [k, Number(v) || 0])),
       };
     })
