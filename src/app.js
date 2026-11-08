@@ -149,7 +149,7 @@ function renderInicio(D) {
 // ---------- Finanças ----------
 // Especificação: Sistema/Painéis/Painel de Finanças.md. O build manda a projeção pronta; aqui entra só o "hoje".
 
-const GASTO_ROTULO = { comida: 'Comida', transporte: 'Transporte (Uber, 99)', extras: 'Extras', 'gás': 'Gás', 'saúde': 'Saúde (farmácia)', 'não-identificado': 'Não identificado' };
+const GASTO_ROTULO = { 'comer-fora': 'Comer fora', 'mercado-pix': 'Mercado no Pix', comida: 'Comida', transporte: 'Transporte (Uber, 99)', extras: 'Extras', 'gás': 'Gás', 'saúde': 'Saúde (farmácia)', 'não-identificado': 'Não identificado' };
 const MESES_LONGOS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 const kilo = (v) => (v <= 0.5 ? '0' : `${(v / 1000).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}k`);
 
