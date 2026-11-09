@@ -399,3 +399,15 @@ a.card:hover { border-color: var(--accent); }
 .linha-prev span { position: absolute; right: 0; top: -9px; font-size: 11px; color: var(--muted); background: var(--surface); padding-left: 4px; font-family: ui-monospace, monospace; }
 .mercado > .card-w { align-self: start; }
 @media (max-width: 900px) { .mercado { grid-template-columns: 1fr; } }
+
+/* Tarefas de hoje (na faixa escura do Início) */
+.rotina .r { height: auto; min-height: 44px; padding: 6px 16px 6px 12px; border-radius: 14px; text-align: left; }
+.rotina .r-txt { display: flex; flex-direction: column; line-height: 1.3; }
+.rotina .r-txt small { font-size: 12px; font-weight: 400; color: var(--rotina-muted); }
+.rotina .r.ok .r-txt small { color: inherit; opacity: .7; }
+.rotina .r.fin { border-left: 4px solid var(--fin-ac); }
+.rotina .r.igr { border-left: 4px solid var(--igr-ac); }
+.rotina .r.cas, .rotina .r.pro { border-left: 4px solid var(--cas-ac); }
+.rotina .r.pes { border-left: 4px solid var(--pes-ac); }
+.rotina .r.atrasada .r-txt small { color: #f5a3a0; font-weight: 600; }
+.r-vazio { margin: 0; color: var(--rotina-muted); }

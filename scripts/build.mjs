@@ -424,11 +424,9 @@ function homeData(notes) {
       .map((m) => ({ mes: String(m['mês']), pct: Number(m['pct-pessoal']) })),
   };
 
-  const rotinaNota = notes.find((n) => n.name === 'Rotina diária');
-  const rotina = [...(rotinaNota?.body ?? '').matchAll(/^[-*] (?!\[)(.+)$/gm)].map((m) => toPlainInline(m[1]));
 
   return {
-    nome: 'Mateus', rotina, rotinaUrl: rotinaNota?.url ?? '/pessoal/',
+    nome: 'Mateus',
     eventos, resumo, dividaTotal, gp: { horario: gp['horário'] ? String(gp['horário']) : '', encontros }, palavras: palavras.slice(0, 5),
     projetos: { porStatus, andamento }, viagens, tokens,
   };
@@ -564,7 +562,6 @@ function financePage(notes, home, indexNote) {
 ${indexNote ? `<section class="fin-notas"><h2>Notas de finanças</h2><div class="prose">${indexNote.html}</div></section>` : ''}`;
 }
 
-const toPlainInline = (s) => s.replace(WIKILINK, (_, _b, t, l) => l || t).replace(/[*_`]/g, '').trim();
 
 const ICONE = {
   'finanças': '<path d="M3 7h15a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M3 7l12-3v3"></path><circle cx="16" cy="13" r="1.2"></circle>',
@@ -586,9 +583,9 @@ function homePage(notes) {
     <h1 data-saudacao>Olá</h1>
     <p data-hoje-linha></p>
   </header>
-  <section class="rotina" aria-labelledby="rotina-titulo">
-    <div class="rotina-head"><p class="lbl" id="rotina-titulo">Todo dia</p><p class="rotina-conta" data-rotina-conta></p></div>
-    <div class="rotina-itens" data-rotina></div>
+  <section class="rotina" aria-labelledby="hoje-titulo">
+    <div class="rotina-head"><p class="lbl" id="hoje-titulo">Hoje</p><p class="rotina-conta" data-hoje-conta></p></div>
+    <div class="rotina-itens" data-hoje-tarefas></div>
   </section>
   <section class="semana" aria-labelledby="semana-titulo">
     <div class="semana-head"><p class="lbl" id="semana-titulo" data-semana-titulo>Esta semana</p><p class="depois" data-depois></p></div>
