@@ -583,10 +583,6 @@ function homePage(notes) {
     <h1 data-saudacao>Olá</h1>
     <p data-hoje-linha></p>
   </header>
-  <section class="rotina" aria-labelledby="hoje-titulo">
-    <div class="rotina-head"><p class="lbl" id="hoje-titulo">Hoje</p><p class="rotina-conta" data-hoje-conta></p></div>
-    <div class="rotina-itens" data-hoje-tarefas></div>
-  </section>
   <section class="semana" aria-labelledby="semana-titulo">
     <div class="semana-head"><p class="lbl" id="semana-titulo" data-semana-titulo>Esta semana</p><p class="depois" data-depois></p></div>
     <div class="semana-dias" data-semana></div>

@@ -216,20 +216,6 @@ a.card:hover { border-color: var(--accent); }
 .inicio-head p { margin: 0; font-size: 15px; color: var(--muted); }
 .inicio-head p::first-letter { text-transform: uppercase; }
 
-/* Todo dia */
-.rotina { display: flex; align-items: center; gap: 20px; padding: 14px 20px; border-radius: 18px; background: var(--rotina-bg); color: var(--rotina-tx); }
-.rotina-head { flex-shrink: 0; width: 110px; }
-.rotina .lbl { color: var(--rotina-muted); }
-.rotina-conta { margin: 2px 0 0; font-size: 24px; font-weight: 700; }
-.rotina-itens { display: flex; flex-wrap: wrap; gap: 10px; }
-.rotina .r {
-  display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 16px 0 12px;
-  border-radius: 999px; border: 1px solid var(--rotina-borda); background: var(--rotina-btn); color: var(--rotina-tx);
-  font: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
-}
-.rotina .r.ok { background: var(--rotina-tx); color: var(--rotina-bg); border-color: var(--rotina-tx); text-decoration: line-through; }
-.rotina .caixa { width: 20px; height: 20px; border-radius: 999px; border: 2px solid currentColor; display: grid; place-items: center; flex-shrink: 0; box-sizing: border-box; }
-
 /* Semana */
 .semana { display: flex; flex-direction: column; gap: 10px; }
 .semana-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px 16px; }
@@ -237,7 +223,7 @@ a.card:hover { border-color: var(--accent); }
 .depois b { color: var(--text); }
 .semana-dias { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; }
 .day { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 8px; min-height: 150px; }
-.day.amanha { border-color: var(--fin-ac); box-shadow: inset 0 0 0 1px var(--fin-ac); }
+.day.hoje { border-color: var(--fin-ac); box-shadow: inset 0 0 0 1px var(--fin-ac); }
 .dh { display: flex; justify-content: space-between; align-items: baseline; margin: 0 0 2px; }
 .dh span { font-family: ui-monospace, "Geist Mono", monospace; font-size: 11px; font-weight: 500; letter-spacing: .07em; color: var(--muted); }
 .dh b { font-size: 22px; letter-spacing: -.02em; }
@@ -284,9 +270,6 @@ a.card:hover { border-color: var(--accent); }
   .free { margin: 0; align-self: center; }
 }
 @media (max-width: 560px) {
-  .rotina { flex-direction: column; align-items: stretch; gap: 10px; }
-  .rotina-head { width: auto; display: flex; justify-content: space-between; align-items: baseline; }
-  .rotina .r { width: 100%; }
   .tiles { grid-template-columns: 1fr; }
   .inicio-head h1 { font-size: 26px; }
   .inicio .v.big { font-size: 21px; white-space: nowrap; }
@@ -401,13 +384,3 @@ a.card:hover { border-color: var(--accent); }
 @media (max-width: 900px) { .mercado { grid-template-columns: 1fr; } }
 
 /* Tarefas de hoje (na faixa escura do Início) */
-.rotina .r { height: auto; min-height: 44px; padding: 6px 16px 6px 12px; border-radius: 14px; text-align: left; }
-.rotina .r-txt { display: flex; flex-direction: column; line-height: 1.3; }
-.rotina .r-txt small { font-size: 12px; font-weight: 400; color: var(--rotina-muted); }
-.rotina .r.ok .r-txt small { color: inherit; opacity: .7; }
-.rotina .r.fin { border-left: 4px solid var(--fin-ac); }
-.rotina .r.igr { border-left: 4px solid var(--igr-ac); }
-.rotina .r.cas, .rotina .r.pro { border-left: 4px solid var(--cas-ac); }
-.rotina .r.pes { border-left: 4px solid var(--pes-ac); }
-.rotina .r.atrasada .r-txt small { color: #f5a3a0; font-weight: 600; }
-.r-vazio { margin: 0; color: var(--rotina-muted); }

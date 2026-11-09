@@ -76,16 +76,14 @@ function renderInicio(D) {
     ? `<strong class="alerta">${contasHoje.length === 1 ? '1 conta vence' : `${contasHoje.length} contas vencem`} hoje: ${esc(contasHoje.map((e) => e.titulo).join(', '))}</strong>`
     : 'nenhuma conta vence hoje'}`;
 
-  renderHoje(D, hoje);
-
-  // Semana: 7 dias a partir de amanhã
-  const ini = addDays(hoje, 1);
-  const fim = addDays(hoje, 7);
+  // Semana: 7 dias a partir de hoje
+  const ini = hoje;
+  const fim = addDays(hoje, 6);
   document.querySelector('[data-semana-titulo]').textContent = `Esta semana · ${ini.slice(8)} a ${ddmm(fim)}`;
   const dias = [];
   for (let d = ini; d <= fim; d = addDays(d, 1)) {
     const itens = eventos.filter((e) => e.data === d).map((e) => `<div class="e ${AREA_CLASSE[e.area] ?? 'pes'}"><b>${esc(e.titulo)}</b>${esc(e.obs)}${e.atraso ? `<span class="atraso">${esc(e.atraso)}</span>` : ''}</div>`).join('');
-    dias.push(`<div class="day${d === ini ? ' amanha' : ''}"><p class="dh"><span>${DIAS[weekday(d)]}${d === ini ? ' · amanhã' : ''}</span><b>${d.slice(8)}</b></p>${itens || '<p class="free">livre</p>'}</div>`);
+    dias.push(`<div class="day${d === ini ? ' hoje' : ''}"><p class="dh"><span>${DIAS[weekday(d)]}${d === ini ? ' · hoje' : ''}</span><b>${d.slice(8)}</b></p>${itens || '<p class="free">livre</p>'}</div>`);
   }
   document.querySelector('[data-semana]').innerHTML = dias.join('');
 
@@ -288,56 +286,6 @@ function renderFinancas(D) {
   const pagas = r?.pagas ?? [];
   q('[data-fin-pagas]').innerHTML = `<div class="bloco-head"><p class="lbl">Contas pagas · ${pagas.length}</p><p class="num">${money(pagas.reduce((s, p) => s + p.valor, 0))}</p></div>
     <div class="pagas-grid">${pagas.map((p) => `<div class="row"><span>${esc(p.nome)}${p.obs ? ` <small>(${esc(p.obs)})</small>` : ''}</span><b class="num">${p.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b></div>`).join('')}</div>`;
-}
-
-// Tarefas de hoje: compromissos do dia, contas atrasadas ou que vencem hoje, GP e Palavra.
-// Marcáveis; a marcação fica só neste navegador e zera todo dia.
-function tarefasDeHoje(D, hoje) {
-  const itens = [];
-  for (const e of D.eventos) {
-    if (e.data === hoje) itens.push({ titulo: e.titulo, obs: e.obs, area: e.area });
-    else if (e.conta && e.limite && e.data < hoje && e.limite >= hoje) {
-      itens.push({ titulo: e.titulo, obs: `${e.obs} · dia ${e.data.slice(8)} passou, ${e.limite === hoje ? 'vence hoje' : `vence ${ddmm(e.limite)}`}`, area: e.area, alerta: true });
-    }
-  }
-  if (weekday(hoje) === 2) itens.push({ titulo: 'Palavra', obs: 'preparar para quarta', area: 'igreja' });
-  if (weekday(hoje) === 3) {
-    const enc = D.gp.encontros.find((x) => x.data === hoje);
-    itens.push({ titulo: 'GP de jovens', obs: [enc?.horario || D.gp.horario, enc?.local].filter(Boolean).join(' · '), area: 'igreja' });
-  }
-  return itens.sort((a, b) => (b.alerta ?? false) - (a.alerta ?? false));
-}
-
-function renderHoje(D, hoje) {
-  const box = document.querySelector('[data-hoje-tarefas]');
-  const conta = document.querySelector('[data-hoje-conta]');
-  const itens = tarefasDeHoje(D, hoje);
-  const id = (t) => `${t.titulo}|${t.obs}`;
-  const key = `hoje:${hoje}`;
-  let feitos = [];
-  try {
-    feitos = JSON.parse(localStorage.getItem(key) ?? '[]');
-    for (let i = localStorage.length - 1; i >= 0; i--) {
-      const k = localStorage.key(i);
-      if ((k?.startsWith('hoje:') && k !== key) || k?.startsWith('rotina:')) localStorage.removeItem(k);
-    }
-  } catch {}
-  const paint = () => {
-    conta.textContent = itens.length ? `${itens.filter((t) => feitos.includes(id(t))).length}/${itens.length}` : '';
-    box.innerHTML = itens.map((t, i) => {
-      const ok = feitos.includes(id(t));
-      return `<button type="button" class="r ${AREA_CLASSE[t.area] ?? 'pes'}${ok ? ' ok' : ''}${t.alerta ? ' atrasada' : ''}" data-i="${i}" aria-pressed="${ok}"><span class="caixa" aria-hidden="true">${ok ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"></path></svg>' : ''}</span><span class="r-txt"><b>${esc(t.titulo)}</b>${t.obs ? `<small>${esc(t.obs)}</small>` : ''}</span></button>`;
-    }).join('') || '<p class="r-vazio">Nada marcado para hoje.</p>';
-  };
-  box.addEventListener('click', (ev) => {
-    const b = ev.target.closest('button[data-i]');
-    if (!b) return;
-    const k = id(itens[Number(b.dataset.i)]);
-    feitos = feitos.includes(k) ? feitos.filter((x) => x !== k) : [...feitos, k];
-    try { localStorage.setItem(key, JSON.stringify(feitos)); } catch {}
-    paint();
-  });
-  paint();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
