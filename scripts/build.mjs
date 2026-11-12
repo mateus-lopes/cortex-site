@@ -350,11 +350,20 @@ function homeData(notes) {
   const now = new Date().toISOString().slice(0, 7);
   const months = [...new Set([...meses.keys(), now, addMonths(now, 1), addMonths(now, 2)])].sort();
 
+  // Um pagamento conta para o mês do campo `mês` (pagamento adiantado) ou, sem ele, para o mês da nota
+  const pagosPorMes = new Map();
+  for (const [m, n] of meses) {
+    for (const p of [n.data.pagamentos ?? []].flat()) {
+      const k = String(p?.['mês'] ?? m);
+      pagosPorMes.set(k, [...(pagosPorMes.get(k) ?? []), p]);
+    }
+  }
+
   const eventos = [];
   const resumo = {};
   for (const ym of months) {
     const nota = meses.get(ym);
-    const pagos = [nota?.data.pagamentos ?? []].flat();
+    const pagos = pagosPorMes.get(ym) ?? [];
     const pagou = (campo, nome) => pagos.some((p) => nfc(linkTarget(p?.[campo]) ?? '') === nome);
     let aPagar = 0;
     for (const c of contas) {
@@ -391,7 +400,7 @@ function homeData(notes) {
     if (nota) {
       const teto = Number(nota.data['teto-dia-a-dia'] ?? 0);
       const usado = Object.values(nota.data.gastos ?? {}).reduce((s, v) => s + (Number(v) || 0), 0);
-      const pagas = pagos.map((x) => ({ nome: linkTarget(x?.conta ?? x?.divida) ?? '', valor: Number(x?.valor ?? 0), obs: x?.obs ?? '' }))
+      const pagas = [nota.data.pagamentos ?? []].flat().map((x) => ({ nome: linkTarget(x?.conta ?? x?.divida) ?? '', valor: Number(x?.valor ?? 0), obs: x?.obs ?? '' }))
         .sort((a, b) => b.valor - a.valor);
       resumo[ym] = { teto, usado, aPagar, gastos: nota.data.gastos ?? {}, pagas, nota: nota.url };
     }
