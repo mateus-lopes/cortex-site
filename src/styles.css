@@ -63,7 +63,7 @@ body {
 }
 a { color: var(--accent); }
 img { max-width: 100%; height: auto; border-radius: 8px; }
-.wrap { max-width: 1240px; margin: 0 auto; padding: 0 16px; }
+.wrap { max-width: 1480px; margin: 0 auto; padding: 0 16px; }
 main.wrap { padding-bottom: 64px; }
 .muted, .meta { color: var(--muted); }
 .meta { margin: 0; font-size: .8rem; }
