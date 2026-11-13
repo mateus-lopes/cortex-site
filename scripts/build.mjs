@@ -517,7 +517,7 @@ function financeData(notes) {
       etiquetas.push(`${entrada ? 'entrada paga · ' : ''}1ª parcela em ${MONTHS[Number(String(d.data['primeira-parcela']).slice(5, 7)) - 1]}`);
     }
     return {
-      nome: `${curto(d)} · ${d.name.split(' ').slice(1).join(' ')} ${d.data.parcelas}x`.replace(/\s+/g, ' '),
+      nome: `${curto(d)} · ${d.data.parcelas}x`,
       curto: curto(d), url: d.url, cor: CORES_DIVIDA[i % CORES_DIVIDA.length], taxa: Number(d.data['taxa-mensal'] ?? 0),
       etiqueta: etiquetas.join(' · '), saldo: ultimoSaldo(d),
       progresso: valor ? Math.max(0, Math.min(1, (valor - ultimoSaldo(d)) / valor)) : 0,
