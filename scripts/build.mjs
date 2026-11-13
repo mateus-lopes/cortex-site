@@ -549,8 +549,53 @@ function financeData(notes) {
   return { dividas, series, grafico, mercado, premissas: { renda: RENDA_BASE, contas: contasTotal, parcelas, teto, extra } };
 }
 
+// Ranking de itens do mercado, lido do D1 do app de pedidos (só no build com token; sem token, some)
+const D1_PEDIDOS = 'b18ae539-89e1-4b43-bfcf-fd84d099c784';
+let RANKING = null;
+async function rankingMercado() {
+  const { CLOUDFLARE_API_TOKEN: token, CLOUDFLARE_ACCOUNT_ID: conta } = process.env;
+  if (!token || !conta) return null;
+  try {
+    const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${conta}/d1/database/${D1_PEDIDOS}/query`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sql: "select tabela, dados from registros where dados is not null and tabela in ('compras', 'produtos', 'variantes')" }),
+    });
+    const j = await r.json();
+    if (!j.success) throw new Error(JSON.stringify(j.errors));
+    const T = { compras: new Map(), produtos: new Map(), variantes: new Map() };
+    for (const row of j.result[0].results) { const d = JSON.parse(row.dados); T[row.tabela].set(d.id, d); }
+    const caros = new Map();
+    const comprados = new Map();
+    for (const c of T.compras.values()) {
+      const data = String(c.data?.$data ?? c.data ?? '').slice(0, 10);
+      for (const it of c.itens ?? []) {
+        const v = T.variantes.get(it.varianteId);
+        if (!v) continue;
+        const preco = Number(it.precoUnitario ?? 0);
+        if (!caros.has(v.id) || caros.get(v.id).preco < preco) caros.set(v.id, { nome: v.nome, preco, loja: c.mercado ?? '', data });
+        const nome = T.produtos.get(v.produtoId)?.nome ?? v.nome;
+        const p = comprados.get(nome) ?? { nome, qtd: 0, vezes: new Set(), total: 0 };
+        p.qtd += Number(it.embalagens ?? 0);
+        p.vezes.add(c.id);
+        p.total += preco * Number(it.embalagens ?? 0);
+        comprados.set(nome, p);
+      }
+    }
+    return {
+      caros: [...caros.values()].sort((a, b) => b.preco - a.preco).slice(0, 40),
+      comprados: [...comprados.values()].map((p) => ({ ...p, vezes: p.vezes.size, total: Math.round(p.total * 100) / 100 }))
+        .sort((a, b) => b.qtd - a.qtd || b.total - a.total).slice(0, 40),
+    };
+  } catch (e) {
+    console.warn(`  ranking do mercado ignorado: ${e.message}`);
+    return null;
+  }
+}
+
 function financePage(notes, home, indexNote) {
   const fin = financeData(notes);
+  fin.ranking = RANKING;
   const dados = JSON.stringify({ fin, resumo: home.resumo, eventos: home.eventos.filter((e) => e.conta) }).replace(/</g, '\\u003c');
   return `
 <div class="financas">
@@ -632,6 +677,7 @@ async function build() {
     for (const rel of await walk(path.join(VAULT, ANEXOS))) attachments.set(nfc(path.basename(rel)), rel);
   }
   const notes = await loadNotes();
+  RANKING = await rankingMercado();
   LINKS = new Map();
   for (const n of notes) if (!LINKS.has(n.name)) LINKS.set(n.name, n);
   for (const n of notes) n.html = renderMarkdown(n, notes);

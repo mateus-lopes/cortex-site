@@ -229,10 +229,13 @@ function renderFinancas(D) {
         <p class="s">${Object.entries(mm.porPagamento).map(([k, v]) => `${esc(k)}: ${money(v)}${/cart/.test(k) ? ' (fatura do mês seguinte)' : /pix/i.test(k) ? ' (sai do dia a dia)' : ''}`).join(' · ')}</p>` : ''}
         ${tabela}
       </div>
+      <div class="merc-dir">
       <div class="card-w">
         <div class="bloco-head"><p class="lbl">Mercado mês a mês</p>
           <div class="legenda">${GRUPOS.map(([nome, , cor]) => `<span class="leg"><span class="sw" style="background:${cor}"></span>${nome.split(' ')[0]}</span>`).join('')}<span class="leg"><span class="sw linha"></span>previsto</span></div></div>
         <div class="mgraf">${previsto ? `<div class="linha-prev" style="bottom:${20 + Math.round((previsto / max) * ALT)}px"><span>${money(previsto).replace(',00', '')}</span></div>` : ''}${hist}</div>
+      </div>
+      ${rankingHtml(F.ranking)}
       </div>`;
   }
 
@@ -286,6 +289,18 @@ function renderFinancas(D) {
   const pagas = r?.pagas ?? [];
   q('[data-fin-pagas]').innerHTML = `<div class="bloco-head"><p class="lbl">Contas pagas · ${pagas.length}</p><p class="num">${money(pagas.reduce((s, p) => s + p.valor, 0))}</p></div>
     <div class="pagas-grid">${pagas.map((p) => `<div class="row"><span>${esc(p.nome)}${p.obs ? ` <small>(${esc(p.obs)})</small>` : ''}</span><b class="num">${p.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b></div>`).join('')}</div>`;
+}
+
+// Tier list do mercado: os itens mais caros (preço da embalagem) e os mais comprados (embalagens somadas)
+function rankingHtml(R) {
+  if (!R || (!R.caros.length && !R.comprados.length)) return '';
+  const tier = (i) => (i < 3 ? 'S' : i < 10 ? 'A' : i < 20 ? 'B' : 'C');
+  const lista = (titulo, itens, linha) => `<div class="rank"><p class="lbl">${titulo}</p><ol class="rank-lista">${itens.map((x, i) =>
+    `<li><span class="tier t${tier(i)}">${tier(i)}</span><span class="rank-nome">${esc(x.nome)}<small>${linha(x)[1]}</small></span><span class="num">${linha(x)[0]}</span></li>`).join('')}</ol></div>`;
+  return `<div class="card-w rank-card">
+    ${lista('Mais caros', R.caros, (x) => [money(x.preco), esc([x.loja, x.data ? ddmm(x.data) : ''].filter(Boolean).join(' · '))])}
+    ${lista('Mais comprados', R.comprados, (x) => [`${x.qtd.toLocaleString('pt-BR')}×`, `${x.vezes} ${x.vezes === 1 ? 'compra' : 'compras'} · ${money(x.total)}`])}
+  </div>`;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
