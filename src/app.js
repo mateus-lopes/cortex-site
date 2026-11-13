@@ -296,7 +296,7 @@ function rankingHtml(R) {
   if (!R || (!R.caros.length && !R.comprados.length)) return '';
   const tier = (i) => (i < 3 ? 'S' : i < 10 ? 'A' : i < 20 ? 'B' : 'C');
   const lista = (titulo, itens, linha) => `<div class="rank"><p class="lbl">${titulo}</p><ol class="rank-lista">${itens.map((x, i) =>
-    `<li><span class="tier t${tier(i)}">${tier(i)}</span><span class="rank-nome">${esc(x.nome)}<small>${linha(x)[1]}</small></span><span class="num">${linha(x)[0]}</span></li>`).join('')}</ol></div>`;
+    `<li><span class="tier t${tier(i)}">${tier(i)}</span><span class="rank-nome" title="${esc(x.nome)}">${esc(x.nome)}<small>${linha(x)[1]}</small></span><span class="num">${linha(x)[0]}</span></li>`).join('')}</ol></div>`;
   return `<div class="card-w rank-card">
     ${lista('Mais caros', R.caros, (x) => [money(x.preco), esc([x.loja, x.data ? ddmm(x.data) : ''].filter(Boolean).join(' · '))])}
     ${lista('Mais comprados', R.comprados, (x) => [`${x.qtd.toLocaleString('pt-BR')}×`, `${x.vezes} ${x.vezes === 1 ? 'compra' : 'compras'} · ${money(x.total)}`])}
