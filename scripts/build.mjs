@@ -453,7 +453,8 @@ function financeData(notes) {
   const contas = inFolder('Finanças/Contas').filter((n) => n.data.tipo === 'conta' && n.data.status === 'ativa');
   const todas = inFolder('Finanças/Dívidas').filter((n) => n.data.tipo === 'divida');
   const painel = todas.filter((d) => ['ativa', 'a contratar'].includes(d.data.status))
-    .sort((a, b) => Number(b.data['taxa-mensal'] ?? 0) - Number(a.data['taxa-mensal'] ?? 0));
+    .sort((a, b) => Number(a.data.prioridade ?? 99) - Number(b.data.prioridade ?? 99) || Number(b.data['taxa-mensal'] ?? 0) - Number(a.data['taxa-mensal'] ?? 0));
+  const antecipa = (d) => d.data.antecipar !== false;
   const ultimoMes = inFolder('Finanças/Meses').filter((n) => n.data.tipo === 'mes').sort((a, b) => String(b.data['mês']).localeCompare(String(a.data['mês'])))[0];
   const teto = Number(ultimoMes?.data['teto-dia-a-dia'] ?? 0);
 
@@ -477,6 +478,8 @@ function financeData(notes) {
   const estado = ordem.map((d) => ({
     d, saldo: painel.includes(d) ? ultimoSaldo(d) : 0, taxa: Number(d.data['taxa-mensal'] ?? 0) / 100, parcela: Number(d.data['valor-parcela'] ?? 0),
     inicioParcelas: String(d.data['primeira-parcela'] ?? addMonths(String(d.data.inicio ?? '').slice(0, 7) || mesesReais.at(-1), 1)),
+    // última parcela do contrato: depois dela o saldo zera (evita resto de arredondamento da taxa)
+    fim: d.data['primeira-parcela'] ? addMonths(String(d.data['primeira-parcela']), Number(d.data.parcelas ?? 1) - 1) : null,
     quitacao: null,
   }));
   let dentista = DENTISTA_ATRASADO;
@@ -490,10 +493,11 @@ function financeData(notes) {
       if (x.saldo <= 0) continue;
       x.saldo *= 1 + x.taxa;
       if (mes >= x.inicioParcelas) x.saldo -= x.parcela;
+      if (x.fim && mes >= x.fim && x.saldo > 0) x.saldo = 0;
       if (x.saldo < 0) { livre += -x.saldo; x.saldo = 0; }
     }
     for (const x of estado) {
-      if (x.saldo <= 0 || livre <= 0) continue;
+      if (x.saldo <= 0 || livre <= 0 || !antecipa(x.d)) continue;
       const a = Math.min(livre, x.saldo);
       x.saldo -= a;
       livre -= a;
@@ -506,7 +510,7 @@ function financeData(notes) {
     const e = estado.find((x) => x.d === d);
     const valor = Number(d.data.valor ?? 0);
     const etiquetas = [];
-    if (i === 0) etiquetas.push('prioridade 1');
+    if (antecipa(d)) etiquetas.push(`prioridade ${painel.filter(antecipa).indexOf(d) + 1}`);
     if (d.data.status === 'a contratar') {
       const ini = String(d.data.inicio ?? '').slice(0, 7);
       const entradaPaga = [d.data.pagamentos ?? []].flat().some((p) => p?.tipo === 'entrada');
@@ -522,7 +526,9 @@ function financeData(notes) {
       etiqueta: etiquetas.join(' · '), saldo: ultimoSaldo(d),
       progresso: valor ? Math.max(0, Math.min(1, (valor - ultimoSaldo(d)) / valor)) : 0,
       parcelasPagas: Number(d.data['parcelas-pagas'] ?? 0), parcelas: Number(d.data.parcelas ?? 0), valorParcela: Number(d.data['valor-parcela'] ?? 0),
-      estrategia: i === 0 ? 'antecipar com a sobra' : `antecipar depois do ${curto(painel[i - 1])}`,
+      estrategia: !antecipa(d) ? 'só as parcelas, sem antecipar'
+        : painel.filter(antecipa).indexOf(d) === 0 ? 'antecipar com a sobra'
+        : `antecipar depois do ${curto(painel.filter(antecipa)[painel.filter(antecipa).indexOf(d) - 1])}`,
       quitacao: e?.quitacao ? mesCurto(e.quitacao) : '—',
     };
   });
