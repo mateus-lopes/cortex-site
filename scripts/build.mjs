@@ -469,7 +469,9 @@ function financeData(notes) {
 
   // Projeção: juros pela taxa de cada uma, a parcela de cada uma, e o extra inteiro na de maior taxa
   const contasTotal = contas.reduce((s, c) => s + Number(c.data.valor ?? 0), 0);
-  const parcelas = painel.reduce((s, d) => s + Number(d.data['valor-parcela'] ?? 0), 0);
+  // Parcelas que pesam todo mês: deixa de fora as dívidas com no máximo uma parcela restante (avulsas, como Josué e Festa)
+  const restantes = (d) => Number(d.data.parcelas ?? 0) - Number(d.data['parcelas-pagas'] ?? 0);
+  const parcelas = painel.filter((d) => restantes(d) > 1).reduce((s, d) => s + Number(d.data['valor-parcela'] ?? 0), 0);
   const sobra = RENDA_BASE - contasTotal - parcelas;
   const extra = sobra - teto;
   const estado = ordem.map((d) => ({
