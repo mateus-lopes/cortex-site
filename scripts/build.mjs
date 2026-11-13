@@ -446,7 +446,7 @@ function homeData(notes) {
 
 const RENDA_BASE = 5100;        // seção 4, item 1
 const DENTISTA_ATRASADO = 512;  // seção 4, item 6: pago no mês seguinte à quitação da dívida de maior taxa
-const CORES_DIVIDA = ['#ff9f0a', '#0a84ff', '#bf5af2', '#30b0c7']; // pela ordem de taxa: Bradesco laranja, BB azul
+const CORES_DIVIDA = ['#ff9f0a', '#0a84ff', '#bf5af2', '#30b0c7', '#34c759', '#ff375f', '#8e8e93']; // pela ordem de taxa; sem repetir cor
 
 function financeData(notes) {
   const inFolder = (f) => notes.filter((n) => n.folder === f);
